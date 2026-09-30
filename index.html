@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="zh" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="StandBy">
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <title>StandBy</title>
+  <style>
+    @font-face {
+      font-family: SF-Pro-Rounded-Black;
+      src: url('./SF-Pro-Rounded-Black-jNh6tqG1.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: AFCamberwell-One-Regular;
+      src: url('./AFCamberwell-One-Regular-B2Lu_sey.otf') format('opentype');
+    }
+
+    :root {
+      --color-0: rgb(6, 93, 166);
+      --color-1: rgb(57, 151, 220);
+      --color-2: rgb(6, 93, 166);
+      --color-3: rgb(57, 151, 220);
+      --color-colon: rgba(196, 207, 218, 0.98);
+      --font-scale: 1;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* ======== CLOCK ======== */
+    .clock-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .font {
+      font-family: SF-Pro-Rounded-Black, serif;
+      font-size: calc(min(37vw, 45vh) * var(--font-scale));
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-width: 100vw;
+      letter-spacing: calc(-2vw * var(--font-scale));
+      padding-right: calc(2vw * var(--font-scale));
+      user-select: none;
+      line-height: 1;
+      transition: font-size 0.2s ease;
+    }
+
+    .digit-0 {
+      color: var(--color-0);
+      transform: rotate(-5deg) scaleY(1.2);
+      z-index: 0;
+      display: inline-block;
+    }
+
+    .digit-1 {
+      color: var(--color-1);
+      font-size: calc(min(41vw, 50vh) * var(--font-scale));
+      transform: rotate(1deg) scaleY(1.1);
+      z-index: 1;
+      mix-blend-mode: screen;
+      display: inline-block;
+      transition: font-size 0.2s ease;
+    }
+
+    .colon {
+      color: var(--color-colon);
+      z-index: 2;
+      transform: translateY(-2vw) scale(1.1) rotate(2deg);
+      display: inline-block;
+      animation: colon-breathe 2s ease-in-out infinite;
+    }
+
+    @keyframes colon-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+
+    .colon.no-breathe {
+      animation: none;
+      opacity: 0.98;
+    }
+
+    .digit-2 {
+      color: var(--color-2);
+      transform: rotate(5deg) scaleY(1.15);
+      z-index: 0;
+      display: inline-block;
+    }
+
+    .digit-3 {
+      color: var(--color-3);
+      transform: rotate(-2deg) scaleY(1.15);
+      z-index: 1;
+      mix-blend-mode: screen;
+      display: inline-block;
+    }
+
+    /* Clock position controlled by drag - no drift animation */
+    .clock-inner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .clock-inner.dragging {
+      cursor: grabbing;
+    }
+
+    /* ======== BOTTOM CONTROLS ======== */
+    .controls {
+      position: fixed;
+      bottom: 40px;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      z-index: 100;
+    }
+
+    .controls.visible {
+      opacity: 1;
+    }
+
+    /* Color bar row */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .toggle-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #5a5a5a;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      position: relative;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+    }
+
+    .toggle-button .inner-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .color-bar {
+      display: flex;
+      overflow-x: auto;
+      width: 0;
+      transition: width 0.25s ease;
+      margin-left: 12px;
+      flex-direction: row;
+      align-items: center;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-right: 0;
+    }
+
+    .color-bar.expanded {
+      width: min(75vw, 680px);
+      padding-right: 8px;
+    }
+
+    .color-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .color-dot-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      margin: 5px;
+      border-radius: 50%;
+      transition: box-shadow 0.2s ease;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .color-dot-wrapper.selected {
+      box-shadow: 0 0 0 3px #0b84eb;
+    }
+
+    .color-dot-wrapper:not(.selected) .color-dot:hover {
+      transform: scale(1.1);
+    }
+
+    .color-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-clip: padding-box;
+      box-shadow: inset 0 0 0 4px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    /* ======== SETTINGS PANEL ======== */
+    .settings-panel {
+      position: fixed;
+      bottom: 110px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(28, 28, 30, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 20px 24px;
+      min-width: 340px;
+      max-width: 90vw;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: translateX(-50%) translateY(10px);
+      z-index: 99;
+    }
+
+    .settings-panel.visible {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.85);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+      gap: 12px;
+    }
+
+    .setting-row + .setting-row {
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .setting-label {
+      white-space: nowrap;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    /* Toggle switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #4C4D4F;
+      transition: 0.3s;
+      border-radius: 26px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #ff4949;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+
+    .time-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .time-input {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 13px;
+      width: 110px;
+      outline: none;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .time-input:focus {
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .to-label {
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
+    }
+
+    /* Day checkboxes */
+    .day-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .day-btn {
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .day-btn.active {
+      background: rgba(255, 73, 73, 0.25);
+      border-color: #ff4949;
+      color: #ff8080;
+    }
+
+    /* Background color presets */
+    .bg-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.15);
+      transition: border-color 0.2s, transform 0.2s;
+      flex-shrink: 0;
+    }
+    .bg-dot:hover { transform: scale(1.15); }
+    .bg-dot.selected { border-color: #0b84eb; }
+    .bg-dot.transparent-dot {
+      background: repeating-conic-gradient(#333 0% 25%, #555 0% 50%) 50% / 10px 10px;
+    }
+
+    #bgCustomColor {
+      -webkit-appearance: none;
+      appearance: none;
+      border: 2px solid rgba(255,255,255,0.15) !important;
+    }
+    #bgCustomColor::-webkit-color-swatch-wrapper { padding: 0; }
+    #bgCustomColor::-webkit-color-swatch { border: none; border-radius: 3px; }
+
+    /* Background image button */
+    .bg-img-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+    .bg-img-btn:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    /* Font size slider */
+    .font-size-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .font-size-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 120px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+      outline: none;
+      cursor: pointer;
+    }
+    .font-size-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
+    .font-size-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.3);
+      cursor: pointer;
+      border: none;
+    }
+    .font-size-val {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      min-width: 32px;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Horizontal capsule date bar */
+    .date-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0;
+      margin-top: 1.8vh;
+      user-select: none;
+      transition: opacity 0.3s ease;
+      font-family: SF-Pro-Rounded-Black, serif;
+      padding: 4px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      width: 100%;
+    }
+    .date-display.hidden { opacity: 0; }
+
+    .date-year-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 56px;
+      padding: 6px 10px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .date-year-val {
+      font-size: calc(min(41vw, 50vh) * var(--font-scale) * 0.20 - 20px);
+      color: rgba(255,255,255,0.7);
+      line-height: 1;
+      font-family: SF-Pro-Rounded-Black, serif;
+    }
+
+    .date-month-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      padding: 6px 10px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .date-month-val {
+      font-size: calc(min(41vw, 50vh) * var(--font-scale) * 0.20 - 20px);
+      color: rgba(255,255,255,0.7);
+      line-height: 1;
+      font-family: SF-Pro-Rounded-Black, serif;
+    }
+
+    .date-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      height: 38px;
+      padding: 3px 10px;
+      transition: all 0.25s ease;
+      border-radius: 19px;
+    }
+    .date-cell .weekday {
+      color: rgba(255,255,255,0.35);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: clamp(9px, 0.87vw, 30px);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1px;
+      line-height: 1.2;
+    }
+    .date-cell .day-num {
+      font-size: clamp(15px, 1.64vw, 20px);
+      color: rgba(255,255,255,0.45);
+      line-height: 1;
+    }
+    .date-cell.today {
+      background: rgba(255, 255, 245, 0.85);
+      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.5);
+      padding: 4px 16px;
+      border: 1px solid rgba(255,255,255,0.3);
+      height: auto;
+      min-height: 38px;
+      border-radius: 20px;
+    }
+    .date-cell.today .weekday {
+      color: rgba(80, 60, 20, 0.7);
+      font-family: SF-Pro-Rounded-Black, serif;
+    }
+    .date-cell.today .day-num {
+      color: rgba(40, 30, 10, 0.9);
+      font-size: calc(min(41vw, 50vh) * var(--font-scale) * 0.20 - 20px);
+      font-family: SF-Pro-Rounded-Black, serif;
+      line-height: 1;
+    }
+    .date-cell.today::after {
+      content: "";
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #fff;
+      margin-top: 3px;
+      display: block;
+    }
+
+    /* ======== VIRTUAL PUPPY ======== */
+    .puppy-container {
+      position: absolute;
+      z-index: 5;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.3s ease;
+    }
+    .puppy-container.hidden { opacity: 0; pointer-events: none; transform: scale(0.8); }
+    .puppy-container.walking {
+      transition: left 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), top 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
+    }
+    .puppy-container.idle {
+      transition: left 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), top 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
+    }
+
+    .puppy-sprite {
+      width: 80px;
+      height: 100px;
+      position: relative;
+      filter: drop-shadow(0 3px 10px rgba(0,0,0,0.35));
+      transition: transform 0.1s ease;
+    }
+
+    /* Walking bounce */
+    .puppy-container.walking .puppy-sprite {
+      animation: puppyWalk 0.45s ease-in-out infinite;
+    }
+    @keyframes puppyWalk {
+      0%, 100% { transform: translateY(0) scaleX(var(--walk-dir, 1)); }
+      50% { transform: translateY(-6px) scaleX(var(--walk-dir, 1)); }
+    }
+
+    /* Front legs walking */
+    .puppy-container.walking .puppy-leg-left {
+      animation: legWalkL 0.45s ease-in-out infinite;
+    }
+    .puppy-container.walking .puppy-leg-right {
+      animation: legWalkR 0.45s ease-in-out infinite;
+    }
+    @keyframes legWalkL {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    @keyframes legWalkR {
+      0%, 100% { transform: translateY(-3px); }
+      50% { transform: translateY(0); }
+    }
+
+    /* Tail wag */
+    .puppy-tail {
+      transform-origin: 65px 85px;
+      animation: puppyTailWag 2.2s ease-in-out infinite;
+    }
+    @keyframes puppyTailWag {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-10deg); }
+      75% { transform: rotate(8deg); }
+    }
+
+    /* Idle breathing */
+    .puppy-container.idle .puppy-sprite {
+      animation: puppyBreathe 3s ease-in-out infinite;
+    }
+    @keyframes puppyBreathe {
+      0%, 100% { transform: scale(1) scaleX(var(--walk-dir, 1)); }
+      50% { transform: scale(1.02) scaleX(var(--walk-dir, 1)); }
+    }
+
+    /* Sleeping */
+    .puppy-container.sleeping .puppy-sprite {
+      animation: puppySleep 4s ease-in-out infinite;
+    }
+    @keyframes puppySleep {
+      0%, 100% { transform: translateY(0) rotate(-1deg) scaleX(var(--walk-dir, 1)); }
+      50% { transform: translateY(-1px) rotate(1deg) scaleX(var(--walk-dir, 1)); }
+    }
+    .puppy-container.sleeping .puppy-tail { animation: none; }
+    .puppy-container.sleeping { animation: none !important; }
+
+    /* Footprints */
+    .puppy-footprint {
+      position: fixed;
+      pointer-events: none;
+      width: 8px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      animation: footprintFade 4s ease-out forwards;
+    }
+    @keyframes footprintFade {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Pet interaction particles */
+    .puppy-particle {
+      position: absolute;
+      pointer-events: none;
+      font-size: 16px;
+      animation: particleFloat 1.2s ease-out forwards;
+    }
+    @keyframes particleFloat {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+    }
+
+    /* Zzz animation */
+    .puppy-zzz {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      animation: zzzFloat 2s ease-in-out infinite;
+    }
+    @keyframes zzzFloat {
+      0%, 100% { opacity: 0.3; transform: translateY(0); }
+      50% { opacity: 0.7; transform: translateY(-6px); }
+    }
+
+    /* Status bars */
+    .puppy-status {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      margin-top: 5px;
+    }
+    .puppy-stat {
+      width: 26px;
+      height: 3.5px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.12);
+      overflow: hidden;
+    }
+    .puppy-stat-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+    .puppy-stat-fill.hunger { background: rgba(255,180,100,0.8); }
+    .puppy-stat-fill.mood { background: rgba(255,140,200,0.8); }
+    .puppy-stat-fill.energy { background: rgba(140,200,255,0.8); }
+
+    .puppy-mood-text {
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 3px;
+      height: 14px;
+      transition: opacity 0.3s;
+    }
+
+    /* Action buttons */
+    .puppy-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 6px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .puppy-container:hover .puppy-actions,
+    .puppy-container:active .puppy-actions { opacity: 1; }
+    .puppy-action-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s;
+    }
+    .puppy-action-btn:hover {
+      background: rgba(255,255,255,0.2);
+      transform: scale(1.1);
+    }
+    .puppy-action-btn:active { transform: scale(0.95); }
+
+    /* ======== SWIPE HINT ======== */
+    .swipe-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 14px;
+      gap: 4px;
+      pointer-events: none;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      transition: opacity 0.5s ease;
+    }
+
+    .swipe-hint.hidden {
+      opacity: 0;
+    }
+
+    /* ======== FOOTER ======== */
+    .footer {
+      position: fixed;
+      bottom: 14px;
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.25);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .footer a {
+      color: rgba(255, 255, 255, 0.3);
+      text-decoration: none;
+    }
+
+    /* ======== NIGHT MODE (dark red) ======== */
+    .night-mode .digit-0,
+    .night-mode .digit-1,
+    .night-mode .digit-2,
+    .night-mode .digit-3 {
+      color: rgb(148, 4, 7) !important;
+      mix-blend-mode: normal !important;
+    }
+    .night-mode .colon {
+      color: rgb(111, 26, 23) !important;
+    }
+
+    /* ======== INVISIBLE ======== */
+    .clock-invisible .font {
+      opacity: 0 !important;
+      transition: opacity 1s ease;
+    }
+
+    /* Settings gear icon */
+    .gear-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 10px;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    .gear-btn:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .gear-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: rgba(255,255,255,0.7);
+    }
+
+    /* Settings close button */
+    .settings-close {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .settings-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="clock-wrapper" id="clockWrapper">
+    <!-- Clock -->
+    <div class="clock-inner" id="clockInner">
+      <time class="font" id="clockDisplay">
+        <span class="digit-0" id="d0">0</span>
+        <span class="digit-1" id="d1">0</span>
+        <span class="colon" id="colon">:</span>
+        <span class="digit-2" id="d2">0</span>
+        <span class="digit-3" id="d3">0</span>
+      </time>
+
+      <div class="date-display" id="dateDisplay">
+        <div class="date-year-box">
+          <div class="date-year-val" id="dateYear">2026</div>
+        </div>
+        <div class="date-month-box">
+          <div class="date-month-val" id="dateMonth">05</div>
+        </div>
+        <div class="date-cell" id="dateCell-2">
+          <div class="weekday"></div>
+          <div class="day-num"></div>
+        </div>
+        <div class="date-cell" id="dateCell-1">
+          <div class="weekday"></div>
+          <div class="day-num"></div>
+        </div>
+        <div class="date-cell today" id="dateCell0">
+          <div class="weekday"></div>
+          <div class="day-num"></div>
+        </div>
+        <div class="date-cell" id="dateCell1">
+          <div class="weekday"></div>
+          <div class="day-num"></div>
+        </div>
+        <div class="date-cell" id="dateCell2">
+          <div class="weekday"></div>
+          <div class="day-num"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom controls -->
+    <div class="controls" id="controls">
+      <div class="color-row">
+        <!-- Color toggle button -->
+        <button class="toggle-button" id="colorToggle" title="切换颜色">
+          <span class="inner-dot"></span>
+        </button>
+
+        <!-- Color presets bar -->
+        <div class="color-bar" id="colorBar">
+          <!-- Generated by JS -->
+        </div>
+
+        <!-- Settings gear -->
+        <button class="gear-btn" id="gearBtn" title="设置">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.33.07-.67.07-1.08 0-.41-.03-.75-.07-1.09l2.34-1.84c.21-.16.27-.46.13-.7l-2.22-3.84c-.14-.24-.45-.32-.68-.22l-2.76 1.11c-.57-.44-1.18-.81-1.87-1.08L14.3 2.64A.55.55 0 0 0 13.76 2h-4.54c-.25 0-.47.18-.51.43l-.41 2.96c-.7.27-1.3.64-1.87 1.08L3.67 5.36c-.24-.1-.54-.02-.68.22L.77 9.42c-.14.24-.07.54.13.7l2.34 1.84c-.04.34-.07.68-.07 1.09 0 .41.03.75.07 1.08L.9 15.97c-.2.16-.27.46-.13.7l2.22 3.84c.14.24.44.32.68.22l2.76-1.11c.57.44 1.18.81 1.87 1.08l.41 2.96c.04.25.26.43.51.43h4.54c.25 0 .47-.18.51-.43l.41-2.96c.69-.27 1.3-.64 1.87-1.08l2.76 1.11c.24.1.54.02.68-.22l2.22-3.84c.14-.24.07-.54-.13-.7l-2.34-1.84z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings panel -->
+    <div class="settings-panel" id="settingsPanel">
+      <button class="settings-close" id="settingsClose">✕</button>
+      <div class="settings-title">⚙️ 设置</div>
+
+      <!-- Night mode -->
+      <div class="setting-row">
+        <span class="setting-label">定时夜间模式</span>
+        <label class="switch">
+          <input type="checkbox" id="nightModeToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="nightModeRange" style="display:none; padding: 6px 0 10px;">
+        <div class="time-range">
+          <span class="setting-label" style="font-size:12px;color:rgba(255,255,255,0.5);">起止时间：</span>
+          <input type="time" class="time-input" id="nightStart" value="00:00">
+          <span class="to-label">To</span>
+          <input type="time" class="time-input" id="nightEnd" value="06:00">
+        </div>
+      </div>
+
+      <!-- Auto hide -->
+      <div class="setting-row">
+        <span class="setting-label">定时关闭显示</span>
+        <label class="switch">
+          <input type="checkbox" id="autoHideToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="autoHideRange" style="display:none; padding: 6px 0 10px;">
+        <div class="time-range">
+          <span class="setting-label" style="font-size:12px;color:rgba(255,255,255,0.5);">起止时间：</span>
+          <input type="time" class="time-input" id="hideStart" value="00:00">
+          <span class="to-label">To</span>
+          <input type="time" class="time-input" id="hideEnd" value="06:00">
+        </div>
+      </div>
+
+      <!-- All-day hide by day -->
+      <div class="setting-row">
+        <span class="setting-label">全天关闭显示</span>
+        <label class="switch">
+          <input type="checkbox" id="dayHideToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="dayHideOptions" style="display:none; padding: 6px 0 10px;">
+        <div class="day-buttons" id="dayButtons">
+          <!-- Generated by JS -->
+        </div>
+      </div>
+
+      <!-- Background color -->
+      <div class="setting-row">
+        <span class="setting-label">背景颜色</span>
+        <div style="position:relative;display:flex;align-items:center;gap:8px;">
+          <div id="bgPresets" style="display:flex;gap:6px;align-items:center;"></div>
+          <input type="color" id="bgCustomColor" value="#000000" style="width:26px;height:26px;border:none;background:none;cursor:pointer;padding:0;border-radius:4px;overflow:hidden;" title="自定义颜色">
+        </div>
+      </div>
+
+      <!-- Background image -->
+      <div class="setting-row">
+        <span class="setting-label">背景图片</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="bgImageBtn" class="bg-img-btn" title="选择图片">📁</button>
+          <button id="bgImageClear" class="bg-img-btn" title="清除图片" style="display:none;">✕</button>
+          <input type="file" id="bgImageInput" accept="image/*" style="display:none;">
+        </div>
+      </div>
+
+      <!-- Font size -->
+      <div class="setting-row">
+        <span class="setting-label">字体大小</span>
+        <div class="font-size-control">
+          <span class="font-size-val" id="fontSizeVal">100%</span>
+          <input type="range" class="font-size-slider" id="fontSizeSlider" min="30" max="150" value="100" step="5">
+        </div>
+      </div>
+
+      <!-- Breathe colon -->
+      <div class="setting-row">
+        <span class="setting-label">冒号呼吸灯</span>
+        <label class="switch">
+          <input type="checkbox" id="breatheToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Date display -->
+      <div class="setting-row">
+        <span class="setting-label">显示日期</span>
+        <label class="switch">
+          <input type="checkbox" id="dateToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Virtual Pet -->
+      <div class="setting-row">
+        <span class="setting-label">虚拟宠物</span>
+        <label class="switch">
+          <input type="checkbox" id="puppyToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Virtual Puppy -->
+    <div class="puppy-container hidden idle" id="puppyContainer">
+      <div class="puppy-sprite" id="puppySprite">
+        <svg viewBox="0 0 140 170" width="80" height="100">
+          <defs>
+            <!-- Fur gradients -->
+            <radialGradient id="furLight" cx="50%" cy="40%" r="60%">
+              <stop offset="0%" stop-color="#F5D89A"/>
+              <stop offset="60%" stop-color="#E8C070"/>
+              <stop offset="100%" stop-color="#D4A860"/>
+            </radialGradient>
+            <radialGradient id="furDark" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#D4A860"/>
+              <stop offset="100%" stop-color="#B89250"/>
+            </radialGradient>
+            <radialGradient id="earGrad" cx="50%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#E0B870"/>
+              <stop offset="100%" stop-color="#C09850"/>
+            </radialGradient>
+            <radialGradient id="snoutGrad" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stop-color="#FFF5E0"/>
+              <stop offset="100%" stop-color="#F0D8B0"/>
+            </radialGradient>
+            <!-- Soft shadow filter -->
+            <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feOffset dx="0" dy="1" result="offsetBlur"/>
+              <feMerge>
+                <feMergeNode in="offsetBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Tail (curled golden) -->
+          <path class="puppy-tail" d="M 95 125 Q 120 110 125 85 Q 128 70 118 65" fill="none" stroke="url(#furDark)" stroke-width="10" stroke-linecap="round"/>
+
+          <!-- Back body (sitting posture) -->
+          <ellipse cx="70" cy="115" rx="38" ry="42" fill="url(#furDark)"/>
+
+          <!-- Chest / belly (lighter) -->
+          <ellipse cx="70" cy="118" rx="28" ry="34" fill="url(#furLight)"/>
+
+          <!-- Back legs (paws) -->
+          <ellipse cx="42" cy="152" rx="14" ry="11" fill="url(#furLight)"/>
+          <ellipse cx="98" cy="152" rx="14" ry="11" fill="url(#furLight)"/>
+          <!-- Paw pads -->
+          <ellipse cx="42" cy="154" rx="7" ry="4.5" fill="#E8C8A0"/>
+          <ellipse cx="98" cy="154" rx="7" ry="4.5" fill="#E8C8A0"/>
+
+          <!-- Front legs -->
+          <g class="puppy-leg-left">
+            <rect x="52" y="125" width="12" height="32" rx="6" fill="url(#furLight)"/>
+            <ellipse cx="58" cy="157" rx="9" ry="6" fill="url(#furLight)"/>
+          </g>
+          <g class="puppy-leg-right">
+            <rect x="76" y="125" width="12" height="32" rx="6" fill="url(#furLight)"/>
+            <ellipse cx="82" cy="157" rx="9" ry="6" fill="url(#furLight)"/>
+          </g>
+
+          <!-- Head (main round fluffy shape) -->
+          <ellipse cx="70" cy="55" rx="40" ry="36" fill="url(#furLight)"/>
+
+          <!-- Head fluff (extra fur tufts) -->
+          <ellipse cx="70" cy="22" rx="16" ry="10" fill="url(#furLight)"/>
+          <ellipse cx="50" cy="30" rx="12" ry="8" fill="url(#furLight)"/>
+          <ellipse cx="90" cy="30" rx="12" ry="8" fill="url(#furLight)"/>
+
+          <!-- Cheek fluff -->
+          <ellipse cx="35" cy="60" rx="14" ry="12" fill="url(#furLight)"/>
+          <ellipse cx="105" cy="60" rx="14" ry="12" fill="url(#furLight)"/>
+
+          <!-- Snout area (lighter cream) -->
+          <ellipse cx="70" cy="70" rx="22" ry="16" fill="url(#snoutGrad)"/>
+
+          <!-- Ears (floppy, slightly darker) -->
+          <!-- Left ear -->
+          <path d="M 35 35 Q 20 50 22 70 Q 25 85 38 78 Q 42 60 40 40 Z" fill="url(#earGrad)"/>
+          <path d="M 36 40 Q 26 52 28 65" fill="none" stroke="#B08840" stroke-width="0.8" opacity="0.4"/>
+          <!-- Right ear -->
+          <path d="M 105 35 Q 120 50 118 70 Q 115 85 102 78 Q 98 60 100 40 Z" fill="url(#earGrad)"/>
+          <path d="M 104 40 Q 114 52 112 65" fill="none" stroke="#B08840" stroke-width="0.8" opacity="0.4"/>
+
+          <!-- Inner ear pink -->
+          <path d="M 36 42 Q 30 52 32 62 Q 34 68 38 62 Q 40 52 38 42 Z" fill="#E8A0A0" opacity="0.6"/>
+          <path d="M 104 42 Q 110 52 108 62 Q 106 68 102 62 Q 100 52 102 42 Z" fill="#E8A0A0" opacity="0.6"/>
+
+          <!-- Eyes (big round dark) -->
+          <ellipse cx="54" cy="52" rx="7" ry="8" fill="#1a1510"/>
+          <ellipse cx="86" cy="52" rx="7" ry="8" fill="#1a1510"/>
+          <!-- Eye highlights -->
+          <circle cx="52" cy="49" r="2.5" fill="#fff" opacity="0.85"/>
+          <circle cx="84" cy="49" r="2.5" fill="#fff" opacity="0.85"/>
+          <circle cx="56" cy="54" r="1.2" fill="#fff" opacity="0.4"/>
+          <circle cx="88" cy="54" r="1.2" fill="#fff" opacity="0.4"/>
+
+          <!-- Sleeping eyes (hidden by default) -->
+          <g id="puppySleepingEyes" style="display:none">
+            <path d="M 46 52 Q 54 56 62 52" fill="none" stroke="#1a1510" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 78 52 Q 86 56 94 52" fill="none" stroke="#1a1510" stroke-width="2.2" stroke-linecap="round"/>
+          </g>
+
+          <!-- Eyebrows (tiny, cute) -->
+          <ellipse cx="54" cy="40" rx="4" ry="2" fill="#D4A860" opacity="0.6"/>
+          <ellipse cx="86" cy="40" rx="4" ry="2" fill="#D4A860" opacity="0.6"/>
+
+          <!-- Nose (small pink-brown) -->
+          <ellipse cx="70" cy="66" rx="5" ry="3.5" fill="#D08070"/>
+          <!-- Nose highlight -->
+          <ellipse cx="69" cy="65" rx="2" ry="1" fill="#fff" opacity="0.5"/>
+
+          <!-- Mouth (small smile) -->
+          <path d="M 63 74 Q 70 80 77 74" fill="none" stroke="#1a1510" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M 70 70 L 70 75" fill="none" stroke="#1a1510" stroke-width="1" stroke-linecap="round"/>
+
+          <!-- Whiskers -->
+          <line x1="42" y1="68" x2="22" y2="64" stroke="#D4A860" stroke-width="0.7" opacity="0.5"/>
+          <line x1="42" y1="72" x2="20" y2="72" stroke="#D4A860" stroke-width="0.7" opacity="0.5"/>
+          <line x1="42" y1="76" x2="24" y2="80" stroke="#D4A860" stroke-width="0.7" opacity="0.5"/>
+          <line x1="98" y1="68" x2="118" y2="64" stroke="#D4A860" stroke-width="0.7" opacity="0.5"/>
+          <line x1="98" y1="72" x2="120" y2="72" stroke="#D4A860" stroke-width="0.7" opacity="0.5"/>
+          <line x1="98" y1="76" x2="116" y2="80" stroke="#D4A860" stroke-width="0.7" opacity="0.5"/>
+
+          <!-- Cute blush -->
+          <ellipse cx="42" cy="62" rx="6" ry="4" fill="#E8A0A0" opacity="0.25"/>
+          <ellipse cx="98" cy="62" rx="6" ry="4" fill="#E8A0A0" opacity="0.25"/>
+        </svg>
+        <div class="puppy-zzz" id="puppyZzz" style="display:none">💤</div>
+      </div>
+      <div class="puppy-status" id="puppyStatus">
+        <div class="puppy-stat" title="饱食度"><div class="puppy-stat-fill hunger" id="puppyHunger" style="width:80%"></div></div>
+        <div class="puppy-stat" title="心情"><div class="puppy-stat-fill mood" id="puppyMood" style="width:80%"></div></div>
+        <div class="puppy-stat" title="精力"><div class="puppy-stat-fill energy" id="puppyEnergy" style="width:80%"></div></div>
+      </div>
+      <div class="puppy-mood-text" id="puppyMoodText"></div>
+      <div class="puppy-actions">
+        <button class="puppy-action-btn" id="puppyFeedBtn" title="喂食">🍖</button>
+        <button class="puppy-action-btn" id="puppyPetBtn" title="抚摸">✋</button>
+        <button class="puppy-action-btn" id="puppyPlayBtn" title="玩耍">🎾</button>
+      </div>
+    </div>
+
+</div>
+
+<script>
+// ==================== COLOR PRESETS ====================
+const COLOR_PRESETS = [
+  // [dot-color-left, dot-color-right, color-0, color-1, color-2, color-3]
+  ["rgb(76,151,219)",  "rgba(76,151,219)",   "rgb(6,93,166)",    "rgb(57,151,220)",   "rgb(6,93,166)",    "rgb(57,151,220)"],
+  ["rgb(159,133,235)", "rgba(159,133,235)",  "rgb(109,72,223)",  "rgb(165,138,245)",  "rgb(109,72,223)",  "rgb(165,138,245)"],
+  ["rgb(245,109,142)", "rgba(245,109,142)",  "rgb(210,60,104)",  "rgb(245,109,142)",  "rgb(210,60,104)",  "rgb(245,109,142)"],
+  ["rgb(215,103,175)", "rgb(215,103,175)",   "rgb(154,51,162)",  "rgb(215,103,175)",  "rgb(154,51,162)",  "rgb(215,103,175)"],
+  ["rgb(243,209,76)",  "rgba(243,209,76)",   "rgb(172,148,44)",  "rgb(243,209,76)",   "rgb(172,148,44)",  "rgb(243,209,76)"],
+  ["rgb(244,128,121)", "rgba(244,128,121)",  "rgb(244,89,72)",   "rgb(244,128,121)",  "rgb(244,89,72)",   "rgb(244,128,121)"],
+  ["rgb(245,155,86)",  "rgb(245,155,86)",    "rgb(225,107,26)",  "rgb(245,155,86)",   "rgb(225,107,26)",  "rgb(245,155,86)"],
+  ["rgb(110,213,134)", "rgba(110,213,134)",  "rgb(45,130,95)",   "rgb(110,213,134)",  "rgb(45,130,95)",   "rgb(110,213,134)"],
+  ["rgb(54,200,209)",  "rgb(54,200,209)",    "rgb(4,126,135)",   "rgb(54,200,209)",   "rgb(4,126,135)",   "rgb(54,200,209)"],
+  ["rgb(80,156,228)",  "rgb(110,213,134)",   "rgb(5,94,179)",    "rgb(110,213,134)",  "rgb(80,156,228)",  "rgb(45,130,95)"],
+  ["rgb(5,94,179)",    "rgb(245,155,86)",    "rgb(80,156,228)",  "rgb(245,155,86)",   "rgb(5,94,179)",    "rgb(225,107,26)"],
+  ["rgb(109,72,223)",  "rgb(215,103,175)",   "rgb(165,138,245)", "rgb(215,103,175)",  "rgb(109,72,223)",  "rgb(154,51,162)"],
+  ["rgb(244,128,121)", "rgb(243,209,76)",    "rgb(244,89,72)",   "rgb(243,209,76)",   "rgb(244,128,121)", "rgb(172,148,44)"],
+  ["rgb(245,109,142)", "rgb(54,200,209)",    "rgb(210,60,104)",  "rgb(54,200,209)",   "rgb(245,109,142)", "rgb(4,126,135)"],
+];
+
+const NIGHT_COLORS = ["rgb(148,4,7)", "rgb(111,26,23)"];
+const DAYS = ["日","一","二","三","四","五","六"];
+const STORAGE_KEY = "selectedColorIndex";
+const BG_STORAGE_KEY = "selectedBgColor";
+
+// Background color presets
+const BG_PRESETS = [
+  { color: "#000000", label: "纯黑" },
+  { color: "#0a0a1a", label: "深蓝黑" },
+  { color: "#0d1117", label: "GitHub暗" },
+  { color: "#1a0a0a", label: "深红黑" },
+  { color: "#0a1a0a", label: "深绿黑" },
+  { color: "#141414", label: "深灰" },
+  { color: "#1c1c1e", label: "苹果暗" },
+  { color: "#2c1654", label: "深紫" },
+  { color: "transparent", label: "透明" },
+];
+
+// ==================== STATE ====================
+let selectedColorIndex = parseInt(localStorage.getItem(STORAGE_KEY) || "0");
+let nightMode = false;
+let colorBarOpen = false;
+let settingsOpen = false;
+
+// Settings state
+let autoNightEnabled = false;
+let nightStartTime = { h: 0, m: 0 };
+let nightEndTime = { h: 6, m: 0 };
+
+let autoHideEnabled = false;
+let hideStartTime = { h: 0, m: 0 };
+let hideEndTime = { h: 6, m: 0 };
+
+let dayHideEnabled = false;
+let hideDays = [false, false, false, false, false, false, false];
+
+// ==================== ELEMENTS ====================
+const d0 = document.getElementById('d0');
+const d1 = document.getElementById('d1');
+const d2 = document.getElementById('d2');
+const d3 = document.getElementById('d3');
+const controls = document.getElementById('controls');
+const colorBar = document.getElementById('colorBar');
+const colorToggle = document.getElementById('colorToggle');
+const settingsPanel = document.getElementById('settingsPanel');
+const gearBtn = document.getElementById('gearBtn');
+const settingsClose = document.getElementById('settingsClose');
+const clockWrapper = document.getElementById('clockWrapper');
+
+// ==================== INIT COLOR DOTS ====================
+function initColorDots() {
+  colorBar.innerHTML = '';
+  COLOR_PRESETS.forEach((preset, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'color-dot-wrapper' + (i === selectedColorIndex ? ' selected' : '');
+    wrapper.dataset.index = i;
+
+    const dot = document.createElement('div');
+    dot.className = 'color-dot';
+    dot.style.backgroundImage = `linear-gradient(to right, ${preset[0]} 50%, ${preset[1]} 50%)`;
+
+    wrapper.appendChild(dot);
+    wrapper.addEventListener('click', () => selectColor(i));
+    colorBar.appendChild(wrapper);
+  });
+}
+
+// ==================== COLOR SELECTION ====================
+function applyColor(index) {
+  const root = document.documentElement;
+  const p = COLOR_PRESETS[index];
+  root.style.setProperty('--color-0', p[2]);
+  root.style.setProperty('--color-1', p[3]);
+  root.style.setProperty('--color-2', p[4]);
+  root.style.setProperty('--color-3', p[5]);
+  root.style.setProperty('--color-colon', 'rgba(196, 207, 218, 0.98)');
+}
+
+function applyNightColors() {
+  const root = document.documentElement;
+  root.style.setProperty('--color-0', NIGHT_COLORS[0]);
+  root.style.setProperty('--color-1', NIGHT_COLORS[0]);
+  root.style.setProperty('--color-2', NIGHT_COLORS[0]);
+  root.style.setProperty('--color-3', NIGHT_COLORS[0]);
+  root.style.setProperty('--color-colon', NIGHT_COLORS[1]);
+  // Also remove mix-blend-mode
+  document.querySelectorAll('.digit-1, .digit-3').forEach(el => {
+    el.style.mixBlendMode = 'normal';
+  });
+}
+
+function restoreNormalBlend() {
+  document.querySelectorAll('.digit-1, .digit-3').forEach(el => {
+    el.style.mixBlendMode = '';
+  });
+}
+
+function selectColor(index) {
+  selectedColorIndex = index;
+  localStorage.setItem(STORAGE_KEY, index.toString());
+  document.querySelectorAll('.color-dot-wrapper').forEach((el, i) => {
+    el.classList.toggle('selected', i === index);
+  });
+  if (!nightMode) {
+    applyColor(index);
+  }
+}
+
+// ==================== CLOCK ====================
+function padZero(n) {
+  return String(n).padStart(2, '0');
+}
+
+function updateClock() {
+  const now = new Date();
+  const h = padZero(now.getHours());
+  const m = padZero(now.getMinutes());
+  d0.textContent = h[0];
+  d1.textContent = h[1];
+  d2.textContent = m[0];
+  d3.textContent = m[1];
+
+  // Update date
+  updateDate(now);
+
+  // Check auto-night and auto-hide
+  checkTimedModes();
+}
+
+function updateDate(now) {
+  const dateEl = document.getElementById('dateDisplay');
+  if (dateEl.classList.contains('hidden')) return;
+
+  const wk = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+
+  // Year
+  document.getElementById('dateYear').textContent = now.getFullYear();
+  // Month
+  document.getElementById('dateMonth').textContent = String(now.getMonth() + 1).padStart(2, '0');
+
+  // 5 days: -2, -1, 0 (today), +1, +2
+  for (let offset = -2; offset <= 2; offset++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + offset);
+    const cell = document.getElementById(`dateCell${offset}`);
+    if (!cell) continue;
+    cell.querySelector('.weekday').textContent = wk[d.getDay()];
+    cell.querySelector('.day-num').textContent = String(d.getDate()).padStart(2, '0');
+  }
+}
+
+function checkTimedModes() {
+  const now = new Date();
+  const hhmm = now.getHours() * 60 + now.getMinutes();
+  const day = now.getDay();
+
+  // Night mode
+  if (autoNightEnabled) {
+    const start = nightStartTime.h * 60 + nightStartTime.m;
+    const end = nightEndTime.h * 60 + nightEndTime.m;
+    const inRange = start <= end ? (hhmm >= start && hhmm < end) : (hhmm >= start || hhmm < end);
+    if (inRange && !nightMode) {
+      nightMode = true;
+      applyNightColors();
+    } else if (!inRange && nightMode) {
+      nightMode = false;
+      restoreNormalBlend();
+      applyColor(selectedColorIndex);
+    }
+  } else if (nightMode) {
+    nightMode = false;
+    restoreNormalBlend();
+    applyColor(selectedColorIndex);
+  }
+
+  // Auto hide
+  let shouldHide = false;
+  if (dayHideEnabled && hideDays[day]) {
+    shouldHide = true;
+  } else if (autoHideEnabled) {
+    const start = hideStartTime.h * 60 + hideStartTime.m;
+    const end = hideEndTime.h * 60 + hideEndTime.m;
+    const inRange = start <= end ? (hhmm >= start && hhmm < end) : (hhmm >= start || hhmm < end);
+    if (inRange) shouldHide = true;
+  }
+
+  document.getElementById('clockInner').style.opacity = shouldHide ? '0' : '1';
+}
+
+// ==================== CONTROLS VISIBILITY ====================
+let controlsTimer = null;
+
+function showControls() {
+  controls.classList.add('visible');
+  resetControlsTimer();
+}
+
+function hideControls() {
+  controls.classList.remove('visible');
+  if (colorBarOpen) {
+    colorBarOpen = false;
+    colorBar.classList.remove('expanded');
+  }
+}
+
+function resetControlsTimer() {
+  if (controlsTimer) clearTimeout(controlsTimer);
+  controlsTimer = setTimeout(() => {
+    if (!settingsOpen) hideControls();
+  }, 5000);
+}
+
+// Show controls on any interaction
+document.addEventListener('mousemove', showControls);
+document.addEventListener('touchstart', showControls);
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#controls') && !e.target.closest('#settingsPanel')) {
+    showControls();
+  }
+});
+
+// ==================== COLOR BAR TOGGLE ====================
+colorToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  colorBarOpen = !colorBarOpen;
+  colorBar.classList.toggle('expanded', colorBarOpen);
+  resetControlsTimer();
+});
+
+// ==================== SETTINGS ====================
+gearBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsOpen = !settingsOpen;
+  settingsPanel.classList.toggle('visible', settingsOpen);
+  if (settingsOpen) {
+    if (controlsTimer) clearTimeout(controlsTimer);
+  } else {
+    resetControlsTimer();
+  }
+});
+
+settingsClose.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsOpen = false;
+  settingsPanel.classList.remove('visible');
+  resetControlsTimer();
+});
+
+// Night mode toggle
+const nightModeToggle = document.getElementById('nightModeToggle');
+const nightModeRange = document.getElementById('nightModeRange');
+nightModeToggle.addEventListener('change', () => {
+  autoNightEnabled = nightModeToggle.checked;
+  nightModeRange.style.display = autoNightEnabled ? 'block' : 'none';
+  checkTimedModes();
+});
+
+document.getElementById('nightStart').addEventListener('change', (e) => {
+  const [h, m] = e.target.value.split(':').map(Number);
+  nightStartTime = { h, m };
+});
+document.getElementById('nightEnd').addEventListener('change', (e) => {
+  const [h, m] = e.target.value.split(':').map(Number);
+  nightEndTime = { h, m };
+});
+
+// Auto hide toggle
+const autoHideToggle = document.getElementById('autoHideToggle');
+const autoHideRange = document.getElementById('autoHideRange');
+autoHideToggle.addEventListener('change', () => {
+  autoHideEnabled = autoHideToggle.checked;
+  autoHideRange.style.display = autoHideEnabled ? 'block' : 'none';
+  checkTimedModes();
+});
+
+document.getElementById('hideStart').addEventListener('change', (e) => {
+  const [h, m] = e.target.value.split(':').map(Number);
+  hideStartTime = { h, m };
+});
+document.getElementById('hideEnd').addEventListener('change', (e) => {
+  const [h, m] = e.target.value.split(':').map(Number);
+  hideEndTime = { h, m };
+});
+
+// Day hide toggle
+const dayHideToggle = document.getElementById('dayHideToggle');
+const dayHideOptions = document.getElementById('dayHideOptions');
+const dayButtons = document.getElementById('dayButtons');
+
+dayHideToggle.addEventListener('change', () => {
+  dayHideEnabled = dayHideToggle.checked;
+  dayHideOptions.style.display = dayHideEnabled ? 'block' : 'none';
+  checkTimedModes();
+});
+
+// Init day buttons
+DAYS.forEach((day, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'day-btn';
+  btn.textContent = '周' + day;
+  btn.dataset.day = i;
+  btn.addEventListener('click', () => {
+    hideDays[i] = !hideDays[i];
+    btn.classList.toggle('active', hideDays[i]);
+    checkTimedModes();
+  });
+  dayButtons.appendChild(btn);
+});
+
+// ==================== MICRO DRIFT ====================
+// The clock slightly drifts to prevent screen burn-in
+// Handled by CSS animation on .clock-inner
+
+// ==================== BACKGROUND COLOR ====================
+function applyBgColor(color) {
+  document.documentElement.style.setProperty('--bg-color', color);
+  const hasBgImage = localStorage.getItem(BG_IMAGE_STORAGE_KEY);
+  // Only apply body background if no bg image (body bg would overlay the image)
+  if (!hasBgImage) {
+    document.body.style.background = color;
+  }
+  // Only set solid color on #app if no bg image is active
+  if (!hasBgImage) {
+    document.getElementById('app').style.background = color === 'transparent' ? 'transparent' : '';
+  }
+  localStorage.setItem(BG_STORAGE_KEY, color);
+}
+
+function initBgPresets() {
+  const container = document.getElementById('bgPresets');
+  const saved = localStorage.getItem(BG_STORAGE_KEY) || '#000000';
+  BG_PRESETS.forEach((preset, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'bg-dot' + (preset.color === saved ? ' selected' : '') + (preset.color === 'transparent' ? ' transparent-dot' : '');
+    dot.style.background = preset.color === 'transparent' ? '' : preset.color;
+    dot.title = preset.label;
+    dot.addEventListener('click', () => {
+      container.querySelectorAll('.bg-dot').forEach(d => d.classList.remove('selected'));
+      dot.classList.add('selected');
+      document.getElementById('bgCustomColor').value = preset.color;
+      applyBgColor(preset.color);
+    });
+    container.appendChild(dot);
+  });
+  // Apply saved bg color (only if no bg image is active)
+  if (!localStorage.getItem(BG_IMAGE_STORAGE_KEY)) {
+    document.body.style.background = saved;
+  }
+  document.getElementById('bgCustomColor').value = saved;
+}
+
+// Custom color picker
+document.getElementById('bgCustomColor').addEventListener('input', (e) => {
+  document.getElementById('bgPresets').querySelectorAll('.bg-dot').forEach(d => d.classList.remove('selected'));
+  applyBgColor(e.target.value);
+});
+
+// ==================== BACKGROUND IMAGE ====================
+const BG_IMAGE_STORAGE_KEY = "standbyBgImage";
+const BG_IMG_DB_NAME = "StandByDB";
+const BG_IMG_STORE = "bgImages";
+
+// Simple IndexedDB helper
+function dbInit() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(BG_IMG_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(BG_IMG_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function dbGet(key) {
+  return dbInit().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(BG_IMG_STORE, 'readonly');
+    const store = tx.objectStore(BG_IMG_STORE);
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+function dbSet(key, value) {
+  return dbInit().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(BG_IMG_STORE, 'readwrite');
+    const store = tx.objectStore(BG_IMG_STORE);
+    const req = store.put(value, key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  }));
+}
+function dbDelete(key) {
+  return dbInit().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(BG_IMG_STORE, 'readwrite');
+    const store = tx.objectStore(BG_IMG_STORE);
+    const req = store.delete(key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function applyBgImage(url) {
+  const app = document.getElementById('app');
+  if (url) {
+    app.style.backgroundImage = `url(${url})`;
+    app.style.backgroundSize = 'cover';
+    app.style.backgroundPosition = 'center';
+    app.style.backgroundRepeat = 'no-repeat';
+    document.getElementById('bgImageClear').style.display = 'flex';
+    localStorage.setItem(BG_IMAGE_STORAGE_KEY, '1');
+  } else {
+    app.style.backgroundImage = '';
+    app.style.backgroundSize = '';
+    app.style.backgroundPosition = '';
+    app.style.backgroundRepeat = '';
+    document.getElementById('bgImageClear').style.display = 'none';
+    localStorage.removeItem(BG_IMAGE_STORAGE_KEY);
+    const savedColor = localStorage.getItem(BG_STORAGE_KEY);
+    if (savedColor) applyBgColor(savedColor);
+  }
+}
+
+document.getElementById('bgImageBtn').addEventListener('click', () => {
+  document.getElementById('bgImageInput').click();
+});
+
+document.getElementById('bgImageInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    alert('图片不能超过 10MB');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const dataUrl = ev.target.result;
+    applyBgImage(dataUrl);
+    // Save to IndexedDB (much larger capacity than localStorage)
+    try {
+      await dbSet('bgImageData', dataUrl);
+    } catch(err) {
+      console.warn('IndexedDB save failed:', err);
+    }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+document.getElementById('bgImageClear').addEventListener('click', async () => {
+  applyBgImage(null);
+  try { await dbDelete('bgImageData'); } catch(e) {}
+});
+
+// Restore saved bg image on page load
+(function() {
+  const hasMarker = localStorage.getItem(BG_IMAGE_STORAGE_KEY);
+  if (hasMarker) {
+    dbGet('bgImageData').then(dataUrl => {
+      if (dataUrl) applyBgImage(dataUrl);
+      else localStorage.removeItem(BG_IMAGE_STORAGE_KEY);
+    }).catch(() => localStorage.removeItem(BG_IMAGE_STORAGE_KEY));
+  }
+})();
+
+// ==================== FONT SIZE ====================
+const FONT_SIZE_KEY = "standbyFontSize";
+
+function applyFontSize(percent) {
+  const scale = percent / 100;
+  document.documentElement.style.setProperty('--font-scale', scale);
+  document.getElementById('fontSizeVal').textContent = percent + '%';
+  document.getElementById('fontSizeSlider').value = percent;
+  localStorage.setItem(FONT_SIZE_KEY, percent);
+}
+
+document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
+  applyFontSize(parseInt(e.target.value));
+});
+
+// Restore saved font size
+(function() {
+  const saved = parseInt(localStorage.getItem(FONT_SIZE_KEY));
+  if (saved) applyFontSize(saved);
+})();
+
+// ==================== DRAG CLOCK ====================
+const CLOCK_POS_KEY = "standbyClockPos";
+const clockInner = document.getElementById('clockInner');
+
+let isDragging = false;
+let dragStartX, dragStartY, clockStartX, clockStartY;
+
+function setClockPos(x, y, save) {
+  clockInner.style.left = x + 'px';
+  clockInner.style.top = y + 'px';
+  // Keep centered transform for the inner content
+  clockInner.style.transform = 'translate(-50%, -50%)';
+  if (save) {
+    const px = Math.round((x / window.innerWidth) * 1000) / 1000;
+    const py = Math.round((y / window.innerHeight) * 1000) / 1000;
+    localStorage.setItem(CLOCK_POS_KEY, JSON.stringify({ x: px, y: py }));
+  }
+}
+
+function resetClockPos() {
+  clockInner.style.left = '50%';
+  clockInner.style.top = '50%';
+  clockInner.style.transform = 'translate(-50%, -50%)';
+  localStorage.removeItem(CLOCK_POS_KEY);
+}
+
+// Restore saved position
+(function() {
+  const saved = localStorage.getItem(CLOCK_POS_KEY);
+  if (saved) {
+    try {
+      const pos = JSON.parse(saved);
+      setClockPos(pos.x * window.innerWidth, pos.y * window.innerHeight, false);
+    } catch(e) {}
+  }
+})();
+
+// Mouse events
+clockInner.addEventListener('mousedown', (e) => {
+  if (e.target.closest('#controls') || e.target.closest('#settingsPanel')) return;
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  const rect = clockInner.getBoundingClientRect();
+  clockStartX = rect.left + rect.width / 2;
+  clockStartY = rect.top + rect.height / 2;
+  clockInner.classList.add('dragging');
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+  setClockPos(clockStartX + dx, clockStartY + dy, false);
+});
+
+document.addEventListener('mouseup', () => {
+  if (!isDragging) return;
+  isDragging = false;
+  clockInner.classList.remove('dragging');
+  // Save position
+  const rect = clockInner.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  setClockPos(cx, cy, true);
+});
+
+// Touch events
+clockInner.addEventListener('touchstart', (e) => {
+  if (e.target.closest('#controls') || e.target.closest('#settingsPanel')) return;
+  const touch = e.touches[0];
+  isDragging = true;
+  dragStartX = touch.clientX;
+  dragStartY = touch.clientY;
+  const rect = clockInner.getBoundingClientRect();
+  clockStartX = rect.left + rect.width / 2;
+  clockStartY = rect.top + rect.height / 2;
+  clockInner.classList.add('dragging');
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+  if (!isDragging) return;
+  const touch = e.touches[0];
+  const dx = touch.clientX - dragStartX;
+  const dy = touch.clientY - dragStartY;
+  setClockPos(clockStartX + dx, clockStartY + dy, false);
+}, { passive: true });
+
+document.addEventListener('touchend', () => {
+  if (!isDragging) return;
+  isDragging = false;
+  clockInner.classList.remove('dragging');
+  const rect = clockInner.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  setClockPos(cx, cy, true);
+});
+
+// Double-click to reset position
+clockInner.addEventListener('dblclick', (e) => {
+  if (e.target.closest('#controls') || e.target.closest('#settingsPanel')) return;
+  resetClockPos();
+});
+
+// ==================== BREATHE COLON ====================
+const BREATHE_KEY = "standbyBreathe";
+(function() {
+  const saved = localStorage.getItem(BREATHE_KEY);
+  if (saved === 'off') {
+    document.getElementById('breatheToggle').checked = false;
+    document.getElementById('colon').classList.add('no-breathe');
+  }
+})();
+document.getElementById('breatheToggle').addEventListener('change', (e) => {
+  const on = e.target.checked;
+  document.getElementById('colon').classList.toggle('no-breathe', !on);
+  localStorage.setItem(BREATHE_KEY, on ? 'on' : 'off');
+});
+
+// ==================== DATE DISPLAY ====================
+const DATE_KEY = "standbyShowDate";
+(function() {
+  const saved = localStorage.getItem(DATE_KEY);
+  if (saved === 'off') {
+    document.getElementById('dateToggle').checked = false;
+    document.getElementById('dateDisplay').classList.add('hidden');
+  }
+})();
+document.getElementById('dateToggle').addEventListener('change', (e) => {
+  const on = e.target.checked;
+  document.getElementById('dateDisplay').classList.toggle('hidden', !on);
+  localStorage.setItem(DATE_KEY, on ? 'on' : 'off');
+});
+
+// ==================== START ====================
+function init() {
+  initColorDots();
+  initBgPresets();
+  applyColor(selectedColorIndex);
+  updateClock();
+
+  // Schedule next update at the top of the next minute
+  const now = new Date();
+  const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+  setTimeout(() => {
+    updateClock();
+    setInterval(updateClock, 60 * 1000);
+  }, msUntilNextMinute);
+
+  // Show controls initially for a moment
+  showControls();
+
+  // Initialize puppy
+  puppyEnabled = localStorage.getItem(PUPPY_ENABLED_KEY) === '1';
+  document.getElementById('puppyToggle').checked = puppyEnabled;
+  const puppyContainer = document.getElementById('puppyContainer');
+  if (puppyEnabled) {
+    loadPuppyData();
+    updatePuppyOnReturn();
+    updatePuppyDisplay();
+    puppyContainer.classList.remove('hidden');
+    startPuppyDecay();
+    initPuppyWander();
+  } else {
+    puppyContainer.classList.add('hidden');
+  }
+}
+
+// Handle page visibility for power saving
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    updateClock(); // sync when tab becomes visible
+    if (puppyEnabled) updatePuppyOnReturn();
+  }
+});
+
+// ==================== VIRTUAL PUPPY ====================
+const PUPPY_ENABLED_KEY = "standbyPuppyEnabled";
+const PUPPY_DATA_KEY = "standbyPuppyData";
+const PUPPY_POS_KEY = "standbyPuppyPos";
+const PUPPY_MOODS = {
+  happy: "开心~ 🐶",
+  hungry: "饿了... 🍖",
+  tired: "困了... 💤",
+  sad: "难过... 😢",
+  normal: "很舒服~"
+};
+
+let puppyEnabled = false;
+let puppyData = { hunger: 80, mood: 80, energy: 80, lastUpdate: Date.now() };
+let puppyDecayTimer = null;
+let puppyWanderTimer = null;
+let puppyWanderInterval = null;
+
+function loadPuppyData() {
+  try {
+    const raw = localStorage.getItem(PUPPY_DATA_KEY);
+    if (raw) puppyData = JSON.parse(raw);
+  } catch (e) {}
+}
+function savePuppyData() {
+  localStorage.setItem(PUPPY_DATA_KEY, JSON.stringify(puppyData));
+}
+
+function getPuppyState() {
+  if (puppyData.hunger < 25) return 'hungry';
+  if (puppyData.energy < 20) return 'tired';
+  if (puppyData.mood < 25) return 'sad';
+  if (puppyData.hunger > 70 && puppyData.mood > 70 && puppyData.energy > 50) return 'happy';
+  return 'normal';
+}
+
+function updatePuppyDisplay() {
+  const container = document.getElementById('puppyContainer');
+  const sprite = document.getElementById('puppySprite');
+  const sleepingEyes = document.getElementById('puppySleepingEyes');
+  const zzz = document.getElementById('puppyZzz');
+  const state = getPuppyState();
+
+  // Bars
+  document.getElementById('puppyHunger').style.width = puppyData.hunger + '%';
+  document.getElementById('puppyMood').style.width = puppyData.mood + '%';
+  document.getElementById('puppyEnergy').style.width = puppyData.energy + '%';
+
+  // Mood text
+  document.getElementById('puppyMoodText').textContent = PUPPY_MOODS[state] || '';
+
+  // Sleep state
+  const isSleeping = state === 'tired' && puppyData.energy < 15;
+  if (isSleeping) {
+    container.classList.add('sleeping');
+    container.classList.remove('walking', 'idle');
+    if (sleepingEyes) sleepingEyes.style.display = 'block';
+    if (zzz) zzz.style.display = 'block';
+  } else {
+    container.classList.remove('sleeping');
+    if (!container.classList.contains('walking')) container.classList.add('idle');
+    if (sleepingEyes) sleepingEyes.style.display = 'none';
+    if (zzz) zzz.style.display = 'none';
+  }
+}
+
+function updatePuppyOnReturn() {
+  const now = Date.now();
+  const minsPassed = Math.floor((now - puppyData.lastUpdate) / (1000 * 60));
+  if (minsPassed > 0) {
+    puppyData.hunger = Math.max(0, puppyData.hunger - minsPassed * 1.5);
+    puppyData.mood = Math.max(0, puppyData.mood - minsPassed * 1.2);
+    puppyData.energy = Math.min(100, puppyData.energy + minsPassed * 2);
+    puppyData.lastUpdate = now;
+    savePuppyData();
+    updatePuppyDisplay();
+  }
+}
+
+function puppyDecayTick() {
+  if (!puppyEnabled) return;
+  puppyData.hunger = Math.max(0, puppyData.hunger - 3);
+  puppyData.mood = Math.max(0, puppyData.mood - 2.5);
+  puppyData.energy = Math.max(0, puppyData.energy - 2);
+  puppyData.lastUpdate = Date.now();
+  savePuppyData();
+  updatePuppyDisplay();
+}
+function startPuppyDecay() {
+  clearInterval(puppyDecayTimer);
+  puppyDecayTimer = setInterval(puppyDecayTick, 5 * 60 * 1000);
+}
+
+function spawnPuppyParticle(emoji) {
+  const container = document.getElementById('puppyContainer');
+  const p = document.createElement('div');
+  p.className = 'puppy-particle';
+  p.textContent = emoji;
+  p.style.left = (40 + Math.random() * 20) + 'px';
+  p.style.top = '-10px';
+  container.appendChild(p);
+  setTimeout(() => p.remove(), 1200);
+}
+
+function feedPuppy() {
+  puppyData.hunger = Math.min(100, puppyData.hunger + 25);
+  puppyData.energy = Math.min(100, puppyData.energy + 5);
+  puppyData.mood = Math.min(100, puppyData.mood + 5);
+  puppyData.lastUpdate = Date.now();
+  savePuppyData();
+  updatePuppyDisplay();
+  spawnPuppyParticle('🍖');
+}
+function petPuppy() {
+  puppyData.mood = Math.min(100, puppyData.mood + 20);
+  puppyData.energy = Math.max(0, puppyData.energy - 3);
+  puppyData.lastUpdate = Date.now();
+  savePuppyData();
+  updatePuppyDisplay();
+  spawnPuppyParticle('❤️');
+}
+function playPuppy() {
+  puppyData.mood = Math.min(100, puppyData.mood + 15);
+  puppyData.energy = Math.max(0, puppyData.energy - 10);
+  puppyData.hunger = Math.max(0, puppyData.hunger - 5);
+  puppyData.lastUpdate = Date.now();
+  savePuppyData();
+  updatePuppyDisplay();
+  spawnPuppyParticle('🎾');
+}
+
+// Wandering
+function initPuppyWander() {
+  const container = document.getElementById('puppyContainer');
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const saved = localStorage.getItem(PUPPY_POS_KEY);
+  let startX, startY;
+  if (saved) {
+    try {
+      const pos = JSON.parse(saved);
+      startX = Math.min(Math.max(40, pos.x), vw - 120);
+      startY = Math.min(Math.max(40, pos.y), vh - 180);
+    } catch (e) {
+      startX = vw * 0.15;
+      startY = vh * 0.65;
+    }
+  } else {
+    startX = vw * 0.15;
+    startY = vh * 0.65;
+  }
+  container.style.left = startX + 'px';
+  container.style.top = startY + 'px';
+  container.classList.add('idle');
+
+  scheduleNextPuppyWander();
+  puppyWanderInterval = setInterval(() => {
+    if (!puppyEnabled) return;
+    const state = getPuppyState();
+    if (state === 'tired' && puppyData.energy < 15) return;
+    doPuppyWander();
+  }, 7000);
+
+  window.addEventListener('resize', () => {
+    const x = parseFloat(container.style.left) || 0;
+    const y = parseFloat(container.style.top) || 0;
+    const nvw = window.innerWidth;
+    const nvh = window.innerHeight;
+    container.style.left = Math.min(Math.max(40, x), nvw - 120) + 'px';
+    container.style.top = Math.min(Math.max(40, y), nvh - 180) + 'px';
+  });
+}
+
+function scheduleNextPuppyWander() {
+  clearTimeout(puppyWanderTimer);
+  const delay = 3000 + Math.random() * 5000;
+  puppyWanderTimer = setTimeout(() => {
+    if (!puppyEnabled) return;
+    const state = getPuppyState();
+    if (state === 'tired' && puppyData.energy < 15) {
+      scheduleNextPuppyWander();
+      return;
+    }
+    doPuppyWander();
+    scheduleNextPuppyWander();
+  }, delay);
+}
+
+function doPuppyWander() {
+  const container = document.getElementById('puppyContainer');
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const currentX = parseFloat(container.style.left) || vw / 2;
+  const currentY = parseFloat(container.style.top) || vh * 0.65;
+
+  const distance = 60 + Math.random() * 140;
+  const angle = Math.random() * Math.PI * 2;
+  let newX = currentX + Math.cos(angle) * distance;
+  let newY = currentY + Math.sin(angle) * distance;
+
+  newX = Math.min(Math.max(40, newX), vw - 120);
+  newY = Math.min(Math.max(40, newY), vh - 180);
+
+  const goingRight = newX > currentX;
+  container.style.setProperty('--walk-dir', goingRight ? '1' : '-1');
+
+  container.classList.remove('idle');
+  container.classList.add('walking');
+  container.style.left = newX + 'px';
+  container.style.top = newY + 'px';
+  localStorage.setItem(PUPPY_POS_KEY, JSON.stringify({ x: newX, y: newY }));
+
+  spawnPuppyFootprints(currentX, currentY, newX, newY);
+
+  setTimeout(() => {
+    if (container.classList.contains('walking')) {
+      container.classList.remove('walking');
+      container.classList.add('idle');
+    }
+  }, 2200);
+}
+
+function spawnPuppyFootprints(fromX, fromY, toX, toY) {
+  const steps = 4;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / (steps + 1);
+    const x = fromX + (toX - fromX) * t + 35 + (i % 2 === 0 ? 10 : -10);
+    const y = fromY + (toY - fromY) * t + 95;
+    setTimeout(() => {
+      const fp = document.createElement('div');
+      fp.className = 'puppy-footprint';
+      fp.style.left = x + 'px';
+      fp.style.top = y + 'px';
+      document.getElementById('app').appendChild(fp);
+      setTimeout(() => fp.remove(), 4000);
+    }, i * 400);
+  }
+}
+
+// Draggable
+(function () {
+  const pet = document.getElementById('puppyContainer');
+  let isDragging = false;
+  let dragStartX, dragStartY, petStartX, petStartY;
+
+  pet.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.puppy-action-btn')) return;
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    petStartX = parseFloat(pet.style.left) || 0;
+    petStartY = parseFloat(pet.style.top) || 0;
+    pet.style.transition = 'opacity 0.3s ease';
+    pet.classList.remove('walking', 'idle');
+    clearTimeout(puppyWanderTimer);
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    const newX = Math.min(Math.max(40, petStartX + dx), window.innerWidth - 120);
+    const newY = Math.min(Math.max(40, petStartY + dy), window.innerHeight - 180);
+    pet.style.left = newX + 'px';
+    pet.style.top = newY + 'px';
+    pet.style.setProperty('--walk-dir', dx > 0 ? '1' : '-1');
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    pet.classList.add('idle');
+    localStorage.setItem(PUPPY_POS_KEY, JSON.stringify({
+      x: parseFloat(pet.style.left),
+      y: parseFloat(pet.style.top)
+    }));
+    scheduleNextPuppyWander();
+  });
+})();
+
+// Toggle & init
+document.getElementById('puppyFeedBtn').addEventListener('click', feedPuppy);
+document.getElementById('puppyPetBtn').addEventListener('click', petPuppy);
+document.getElementById('puppyPlayBtn').addEventListener('click', playPuppy);
+
+document.getElementById('puppyToggle').addEventListener('change', (e) => {
+  puppyEnabled = e.target.checked;
+  localStorage.setItem(PUPPY_ENABLED_KEY, puppyEnabled ? '1' : '0');
+  const container = document.getElementById('puppyContainer');
+  if (puppyEnabled) {
+    loadPuppyData();
+    updatePuppyOnReturn();
+    updatePuppyDisplay();
+    container.classList.remove('hidden');
+    startPuppyDecay();
+    initPuppyWander();
+  } else {
+    container.classList.add('hidden');
+    clearInterval(puppyDecayTimer);
+    clearInterval(puppyWanderInterval);
+    clearTimeout(puppyWanderTimer);
+  }
+});
+
+init();
+</script>
+<script src="./desktop-overlay.js"></script>
+<script>
+  // The service worker is intentionally small and only caches this static app.
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>
