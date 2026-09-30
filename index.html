@@ -2,7 +2,7 @@
 <html lang="zh" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="StandBy">
@@ -14,6 +14,9 @@
     @font-face {
       font-family: SF-Pro-Rounded-Black;
       src: url('./SF-Pro-Rounded-Black-jNh6tqG1.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 900;
+      font-display: block;
     }
     @font-face {
       font-family: AFCamberwell-One-Regular;
@@ -21,10 +24,10 @@
     }
 
     :root {
-      --color-0: rgb(6, 93, 166);
-      --color-1: rgb(57, 151, 220);
-      --color-2: rgb(6, 93, 166);
-      --color-3: rgb(57, 151, 220);
+      --color-0: rgb(244, 89, 72);
+      --color-1: rgb(243, 209, 76);
+      --color-2: rgb(244, 128, 121);
+      --color-3: rgb(172, 148, 44);
       --color-colon: rgba(196, 207, 218, 0.98);
       --font-scale: 1;
     }
@@ -41,6 +44,32 @@
       background: #000;
       overflow: hidden;
     }
+
+    .device-status {
+      position: fixed;
+      top: max(18px, env(safe-area-inset-top));
+      right: max(20px, env(safe-area-inset-right));
+      width: 62px;
+      height: 62px;
+      z-index: 80;
+      color: rgba(255,255,255,.92);
+      filter: drop-shadow(0 3px 12px rgba(0,0,0,.28));
+      opacity: .9;
+      pointer-events: none;
+    }
+    .device-status svg { width: 100%; height: 100%; overflow: visible; }
+    .battery-track { stroke: rgba(255,255,255,.22); }
+    .battery-level {
+      stroke: currentColor;
+      stroke-dasharray: 98;
+      stroke-dashoffset: 49;
+      transition: stroke-dashoffset .35s ease, color .35s ease;
+    }
+    .device-status.offline { color: rgba(255,255,255,.32); }
+    .device-status.low-battery { color: rgb(255,96,84); }
+    .device-status .network-detail { opacity: .42; }
+    .device-status[data-network="wifi"] .wifi-mark,
+    .device-status[data-network="cellular"] .cell-mark { opacity: 1; }
 
     #app {
       width: 100vw;
@@ -64,7 +93,10 @@
     }
 
     .font {
-      font-family: SF-Pro-Rounded-Black, serif;
+      font-family: SF-Pro-Rounded-Black, ui-rounded, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 900;
+      font-style: normal;
+      font-synthesis: none;
       font-size: calc(min(37vw, 45vh) * var(--font-scale));
       display: flex;
       justify-content: center;
@@ -92,6 +124,7 @@
       mix-blend-mode: screen;
       display: inline-block;
       transition: font-size 0.2s ease;
+      margin-left: -0.09em;
     }
 
     .colon {
@@ -125,7 +158,23 @@
       z-index: 1;
       mix-blend-mode: screen;
       display: inline-block;
+      margin-left: -0.09em;
     }
+
+    .seconds-group {
+      display: none;
+      align-self: flex-end;
+      align-items: baseline;
+      margin: 0 0 .16em .10em;
+      font-family: SF-Pro-Rounded-Black, ui-rounded, -apple-system, sans-serif;
+      font-size: .19em;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      line-height: 1;
+      color: rgba(255,255,255,.72);
+    }
+    .seconds-group.visible { display: flex; }
+    .seconds-colon { margin-right: .04em; opacity: .65; }
 
     /* Clock position controlled by drag - no drift animation */
     .clock-inner {
@@ -141,6 +190,9 @@
     }
     .clock-inner.dragging {
       cursor: grabbing;
+    }
+    .clock-inner.layout-locked {
+      cursor: default;
     }
 
     /* ======== BOTTOM CONTROLS ======== */
@@ -482,15 +534,17 @@
       align-items: center;
       justify-content: space-between;
       gap: 0;
-      margin-top: 1.8vh;
+      margin-top: clamp(28px, 5.2vh, 58px);
       user-select: none;
       transition: opacity 0.3s ease;
       font-family: SF-Pro-Rounded-Black, serif;
-      padding: 4px 6px;
+      padding: 5px 8px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       width: 100%;
     }
     .date-display.hidden { opacity: 0; }
@@ -551,20 +605,22 @@
       line-height: 1;
     }
     .date-cell.today {
-      background: rgba(255, 255, 245, 0.85);
-      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.5);
+      background: linear-gradient(145deg, rgba(255,255,255,0.34), rgba(255,255,255,0.16));
+      box-shadow: 0 6px 18px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.34);
       padding: 4px 16px;
-      border: 1px solid rgba(255,255,255,0.3);
+      border: 1px solid rgba(255,255,255,0.32);
+      backdrop-filter: blur(22px) saturate(1.55);
+      -webkit-backdrop-filter: blur(22px) saturate(1.55);
       height: auto;
       min-height: 38px;
       border-radius: 20px;
     }
     .date-cell.today .weekday {
-      color: rgba(80, 60, 20, 0.7);
+      color: rgba(255,255,255,0.76);
       font-family: SF-Pro-Rounded-Black, serif;
     }
     .date-cell.today .day-num {
-      color: rgba(40, 30, 10, 0.9);
+      color: rgba(255,255,255,0.96);
       font-size: calc(min(41vw, 50vh) * var(--font-scale) * 0.20 - 20px);
       font-family: SF-Pro-Rounded-Black, serif;
       line-height: 1;
@@ -580,6 +636,7 @@
 
     /* ======== VIRTUAL PUPPY ======== */
     .puppy-container {
+      display: none !important;
       position: absolute;
       z-index: 5;
       cursor: pointer;
@@ -879,6 +936,19 @@
 <body>
 <div id="app">
   <div class="clock-wrapper" id="clockWrapper">
+    <div class="device-status" id="deviceStatus" data-network="unknown" aria-label="设备网络状态">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <path class="battery-track" d="M10 38A22 22 0 0 1 54 38" fill="none" stroke-width="4.5" stroke-linecap="round"/>
+        <path class="battery-level" id="batteryLevel" d="M10 38A22 22 0 0 1 54 38" fill="none" stroke-width="4.5" stroke-linecap="round" pathLength="98"/>
+        <g class="network-detail wifi-mark" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <path d="M21 31c6-6 16-6 22 0"/><path d="M26 36c3.5-3.5 8.5-3.5 12 0"/>
+          <circle cx="32" cy="41" r="1.8" fill="currentColor" stroke="none"/>
+        </g>
+        <g class="network-detail cell-mark" fill="currentColor">
+          <circle cx="23" cy="50" r="2"/><circle cx="29" cy="53" r="2"/><circle cx="35" cy="53" r="2"/><circle cx="41" cy="50" r="2"/>
+        </g>
+      </svg>
+    </div>
     <!-- Clock -->
     <div class="clock-inner" id="clockInner">
       <time class="font" id="clockDisplay">
@@ -887,6 +957,7 @@
         <span class="colon" id="colon">:</span>
         <span class="digit-2" id="d2">0</span>
         <span class="digit-3" id="d3">0</span>
+        <span class="seconds-group" id="secondsGroup"><span class="seconds-colon">:</span><span id="secondsValue">00</span></span>
       </time>
 
       <div class="date-display" id="dateDisplay">
@@ -1005,10 +1076,10 @@
 
       <!-- Background image -->
       <div class="setting-row">
-        <span class="setting-label">背景图片</span>
+        <span class="setting-label">系统墙纸</span>
         <div style="display:flex;align-items:center;gap:8px;">
-          <button id="bgImageBtn" class="bg-img-btn" title="选择图片">📁</button>
-          <button id="bgImageClear" class="bg-img-btn" title="清除图片" style="display:none;">✕</button>
+          <button id="bgImageBtn" class="bg-img-btn" title="从照片库选择墙纸">选择照片</button>
+          <button id="bgImageClear" class="bg-img-btn" title="清除墙纸" style="display:none;">清除</button>
           <input type="file" id="bgImageInput" accept="image/*" style="display:none;">
         </div>
       </div>
@@ -1040,11 +1111,20 @@
         </label>
       </div>
 
-      <!-- Virtual Pet -->
+      <!-- Layout lock -->
       <div class="setting-row">
-        <span class="setting-label">虚拟宠物</span>
+        <span class="setting-label">显示秒数</span>
         <label class="switch">
-          <input type="checkbox" id="puppyToggle">
+          <input type="checkbox" id="secondsToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Layout lock -->
+      <div class="setting-row">
+        <span class="setting-label">锁定布局</span>
+        <label class="switch">
+          <input type="checkbox" id="layoutLockToggle" checked>
           <span class="slider"></span>
         </label>
       </div>
@@ -1233,7 +1313,7 @@ const BG_PRESETS = [
 ];
 
 // ==================== STATE ====================
-let selectedColorIndex = parseInt(localStorage.getItem(STORAGE_KEY) || "0");
+let selectedColorIndex = parseInt(localStorage.getItem(STORAGE_KEY) || "12");
 let nightMode = false;
 let colorBarOpen = false;
 let settingsOpen = false;
@@ -1335,6 +1415,7 @@ function updateClock() {
   d1.textContent = h[1];
   d2.textContent = m[0];
   d3.textContent = m[1];
+  document.getElementById('secondsValue').textContent = padZero(now.getSeconds());
 
   // Update date
   updateDate(now);
@@ -1701,7 +1782,31 @@ document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
 
 // ==================== DRAG CLOCK ====================
 const CLOCK_POS_KEY = "standbyClockPos";
+const LAYOUT_LOCK_KEY = "standbyLayoutLocked";
 const clockInner = document.getElementById('clockInner');
+let layoutLocked = localStorage.getItem(LAYOUT_LOCK_KEY) !== 'off';
+
+function applyLayoutLock(locked) {
+  layoutLocked = Boolean(locked);
+  clockInner.classList.toggle('layout-locked', layoutLocked);
+  document.getElementById('layoutLockToggle').checked = layoutLocked;
+  localStorage.setItem(LAYOUT_LOCK_KEY, layoutLocked ? 'on' : 'off');
+}
+
+let clockTimer = null;
+function scheduleClock() {
+  if (clockTimer) clearTimeout(clockTimer);
+  updateClock();
+  const showSeconds = localStorage.getItem('standbyShowSeconds') === 'on';
+  const interval = showSeconds ? 1000 : 60000;
+  const now = Date.now();
+  clockTimer = setTimeout(scheduleClock, interval - (now % interval));
+}
+
+applyLayoutLock(layoutLocked);
+document.getElementById('layoutLockToggle').addEventListener('change', (e) => {
+  applyLayoutLock(e.target.checked);
+});
 
 let isDragging = false;
 let dragStartX, dragStartY, clockStartX, clockStartY;
@@ -1738,6 +1843,7 @@ function resetClockPos() {
 
 // Mouse events
 clockInner.addEventListener('mousedown', (e) => {
+  if (layoutLocked) return;
   if (e.target.closest('#controls') || e.target.closest('#settingsPanel')) return;
   isDragging = true;
   dragStartX = e.clientX;
@@ -1769,6 +1875,7 @@ document.addEventListener('mouseup', () => {
 
 // Touch events
 clockInner.addEventListener('touchstart', (e) => {
+  if (layoutLocked) return;
   if (e.target.closest('#controls') || e.target.closest('#settingsPanel')) return;
   const touch = e.touches[0];
   isDragging = true;
@@ -1800,6 +1907,7 @@ document.addEventListener('touchend', () => {
 
 // Double-click to reset position
 clockInner.addEventListener('dblclick', (e) => {
+  if (layoutLocked) return;
   if (e.target.closest('#controls') || e.target.closest('#settingsPanel')) return;
   resetClockPos();
 });
@@ -1834,47 +1942,73 @@ document.getElementById('dateToggle').addEventListener('change', (e) => {
   localStorage.setItem(DATE_KEY, on ? 'on' : 'off');
 });
 
+const SECONDS_KEY = 'standbyShowSeconds';
+const secondsToggle = document.getElementById('secondsToggle');
+const secondsGroup = document.getElementById('secondsGroup');
+function applySecondsVisibility(on) {
+  secondsToggle.checked = on;
+  secondsGroup.classList.toggle('visible', on);
+  localStorage.setItem(SECONDS_KEY, on ? 'on' : 'off');
+  scheduleClock();
+}
+applySecondsVisibility(localStorage.getItem(SECONDS_KEY) === 'on');
+secondsToggle.addEventListener('change', (e) => applySecondsVisibility(e.target.checked));
+
 // ==================== START ====================
 function init() {
   initColorDots();
   initBgPresets();
   applyColor(selectedColorIndex);
-  updateClock();
-
-  // Schedule next update at the top of the next minute
-  const now = new Date();
-  const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-  setTimeout(() => {
-    updateClock();
-    setInterval(updateClock, 60 * 1000);
-  }, msUntilNextMinute);
+  scheduleClock();
 
   // Show controls initially for a moment
   showControls();
 
-  // Initialize puppy
-  puppyEnabled = localStorage.getItem(PUPPY_ENABLED_KEY) === '1';
-  document.getElementById('puppyToggle').checked = puppyEnabled;
-  const puppyContainer = document.getElementById('puppyContainer');
-  if (puppyEnabled) {
-    loadPuppyData();
-    updatePuppyOnReturn();
-    updatePuppyDisplay();
-    puppyContainer.classList.remove('hidden');
-    startPuppyDecay();
-    initPuppyWander();
-  } else {
-    puppyContainer.classList.add('hidden');
-  }
+  localStorage.removeItem('standbyPuppyEnabled');
 }
 
 // Handle page visibility for power saving
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     updateClock(); // sync when tab becomes visible
-    if (puppyEnabled) updatePuppyOnReturn();
   }
 });
+
+// ==================== DEVICE STATUS ====================
+const deviceStatus = document.getElementById('deviceStatus');
+const batteryLevelPath = document.getElementById('batteryLevel');
+let deviceBatteryPercent = null;
+
+function updateNetworkStatus() {
+  const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+  const type = connection && (connection.type || connection.effectiveType);
+  const network = type === 'wifi' ? 'wifi' : (type === 'cellular' || /^(2g|3g|4g|5g)$/.test(type || '') ? 'cellular' : 'unknown');
+  deviceStatus.dataset.network = network;
+  deviceStatus.classList.toggle('offline', !navigator.onLine);
+  const batteryText = deviceBatteryPercent === null ? '' : `，电量 ${deviceBatteryPercent}%`;
+  deviceStatus.setAttribute('aria-label', `${navigator.onLine ? '设备已联网' : '设备已离线'}${batteryText}`);
+}
+
+function renderBattery(battery) {
+  const percent = Math.max(0, Math.min(1, battery.level || 0));
+  deviceBatteryPercent = Math.round(percent * 100);
+  batteryLevelPath.style.strokeDashoffset = String(98 * (1 - percent));
+  deviceStatus.classList.toggle('low-battery', percent <= .2 && !battery.charging);
+  updateNetworkStatus();
+}
+
+updateNetworkStatus();
+window.addEventListener('online', updateNetworkStatus);
+window.addEventListener('offline', updateNetworkStatus);
+const deviceConnection = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+if (deviceConnection && deviceConnection.addEventListener) deviceConnection.addEventListener('change', updateNetworkStatus);
+if (navigator.getBattery) {
+  navigator.getBattery().then((battery) => {
+    renderBattery(battery);
+    battery.addEventListener('levelchange', () => renderBattery(battery));
+    battery.addEventListener('chargingchange', () => renderBattery(battery));
+  }).catch(() => {});
+}
 
 // ==================== VIRTUAL PUPPY ====================
 const PUPPY_ENABLED_KEY = "standbyPuppyEnabled";
@@ -2157,30 +2291,6 @@ function spawnPuppyFootprints(fromX, fromY, toX, toY) {
     scheduleNextPuppyWander();
   });
 })();
-
-// Toggle & init
-document.getElementById('puppyFeedBtn').addEventListener('click', feedPuppy);
-document.getElementById('puppyPetBtn').addEventListener('click', petPuppy);
-document.getElementById('puppyPlayBtn').addEventListener('click', playPuppy);
-
-document.getElementById('puppyToggle').addEventListener('change', (e) => {
-  puppyEnabled = e.target.checked;
-  localStorage.setItem(PUPPY_ENABLED_KEY, puppyEnabled ? '1' : '0');
-  const container = document.getElementById('puppyContainer');
-  if (puppyEnabled) {
-    loadPuppyData();
-    updatePuppyOnReturn();
-    updatePuppyDisplay();
-    container.classList.remove('hidden');
-    startPuppyDecay();
-    initPuppyWander();
-  } else {
-    container.classList.add('hidden');
-    clearInterval(puppyDecayTimer);
-    clearInterval(puppyWanderInterval);
-    clearTimeout(puppyWanderTimer);
-  }
-});
 
 init();
 </script>
