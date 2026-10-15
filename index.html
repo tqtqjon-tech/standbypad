@@ -2301,5 +2301,39 @@ init();
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
   }
 </script>
+<script>
+// Keep the foreground clock visible when the browser supports Screen Wake Lock.
+(() => {
+  if (!('wakeLock' in navigator)) return;
+  let wakeLock = null;
+  let requesting = false;
+
+  async function keepAwake() {
+    if (document.visibilityState !== 'visible' || requesting ||
+        (wakeLock && !wakeLock.released)) return;
+    requesting = true;
+    try {
+      const lock = await navigator.wakeLock.request('screen');
+      wakeLock = lock;
+      lock.addEventListener('release', () => {
+        if (wakeLock === lock) wakeLock = null;
+      });
+      // The page may have gone into the background while the request was pending.
+      if (document.visibilityState !== 'visible') await lock.release();
+    } catch (error) {
+      console.info('StandByPad: screen wake lock unavailable', error);
+    } finally {
+      requesting = false;
+    }
+  }
+
+  keepAwake();
+  document.addEventListener('visibilitychange', keepAwake);
+  window.addEventListener('pageshow', keepAwake);
+  // Retry after interaction if the initial request was refused by the browser.
+  document.addEventListener('pointerdown', keepAwake, { passive: true });
+  document.addEventListener('keydown', keepAwake);
+})();
+</script>
 </body>
 </html>
